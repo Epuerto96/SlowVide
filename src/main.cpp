@@ -1,14 +1,21 @@
 #include <SPI.h>
 #include <Wire.h>
-// #include <Adafruit_GFX.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <Adafruit_SSD1306.h>
+// #include <Adafruit_GFX.h>
+
+#define ONE_WIRE_BUS 5
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 
-#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 
 volatile boolean TurnDetected;
 volatile boolean up;
@@ -59,12 +66,12 @@ void updatetemps(float desiredTemp,float actualTemp) {
   display.setCursor(64,0);
   display.println(F("Actual"));
 
-  display.setCursor(0,15);
+  display.setCursor(0,18);
   display.setTextSize(2);             // Draw 3X-scale text
   display.setTextColor(WHITE);
   display.print(desiredTemp , 0);
 
-  display.setCursor(64,15);
+  display.setCursor(64,18);
   display.setTextSize(2);             // Draw 3X-scale text
   display.setTextColor(WHITE);
   display.print(actualTemp, 1);
@@ -88,8 +95,9 @@ void setup() {
 }
 
 void loop() {
+  sensors.requestTemperatures();
 
-  updatetemps(dTemp , temp);
+  updatetemps(dTemp , sensors.getTempFByIndex(0));
 
   static long virtualPosition=0;    // without STATIC it does not count correctly!!!
 
@@ -107,7 +115,7 @@ void loop() {
       dTemp ++;
     Serial.print(dTemp);
     TurnDetected = false;          // do NOT repeat IF loop until new rotation detected
+    delay(75);
   }
 
-  
 }
