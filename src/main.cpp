@@ -7,7 +7,28 @@
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+
 #define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
+
+volatile boolean TurnDetected;
+volatile boolean up;
+
+const int PinCLK=2;                   // Used for generating interrupts using CLK signal
+const int PinDT=3;                    // Used for reading DT signal
+const int PinSW=4;                    // Used for the push button switch
+
+float dTemp = 130;
+float temp;
+
+void isr ()  {                    // Interrupt service routine is executed when a HIGH to LOW transition is detected on CLK
+ if (digitalRead(PinCLK))
+   up = digitalRead(PinDT);
+ else
+   up = !digitalRead(PinDT);
+ TurnDetected = true;
+}
+
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 static const unsigned char PROGMEM logo_bmp[] =
@@ -53,7 +74,10 @@ void updatetemps(float desiredTemp,float actualTemp) {
 }
 
 void setup() {
-
+  pinMode(PinCLK,INPUT);
+  pinMode(PinDT,INPUT);
+  pinMode(PinSW,INPUT);
+  attachInterrupt (0,isr,FALLING);
   Serial.begin(9600);
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -64,7 +88,26 @@ void setup() {
 }
 
 void loop() {
-  float dTemp  = 130;
-  float temp = 130.1;
+
   updatetemps(dTemp , temp);
+
+  static long virtualPosition=0;    // without STATIC it does not count correctly!!!
+
+  if (!(digitalRead(PinSW))) {      // check if pushbutton is pressed
+    virtualPosition=0;              // if YES, then reset counter to ZERO
+    Serial.print ("Reset = ");      // Using the word RESET instead of COUNT here to find out a buggy encoder
+
+    Serial.println (virtualPosition);
+  }
+
+  if (TurnDetected)  {		    // do this only if rotation was detected
+    if (up)
+      dTemp --;
+    else
+      dTemp ++;
+    Serial.print(dTemp);
+    TurnDetected = false;          // do NOT repeat IF loop until new rotation detected
+  }
+
+  
 }
